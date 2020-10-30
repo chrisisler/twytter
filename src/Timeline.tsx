@@ -1,8 +1,12 @@
-import { FC } from 'react';
+import { FC, useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Avatar } from '@material-ui/core';
 
-import { Rows, Pad, Color, Columns, TweetButton } from './style';
+import { Pad, Color } from './style';
+import { DataState, DataStateView } from './DataState';
+import { db, DbPath } from './firebase';
+import { TweetView } from './TweetView';
+import { CreateTweet } from './CreateTweet';
+import { Tweet } from './interfaces';
 
 const TimelineContainer = styled.div`
   flex: 0.4;
@@ -29,60 +33,35 @@ const Sticky = styled.div`
 `;
 
 export const Timeline: FC = () => {
+  const [tweets, setTweets] = useState<DataState<Tweet[]>>(DataState.Loading);
+  useEffect(() => {
+    db.collection(DbPath.Tweets).onSnapshot(
+      ({ docs }) =>
+        setTweets(
+          docs.map((doc) => {
+            const data = doc.data();
+            data.id = doc.id;
+            return data as Tweet;
+          })
+        ),
+      (error) => setTweets(DataState.error(error.message))
+    );
+  }, []);
   return (
     <TimelineContainer>
       <Sticky>
         <h3>Home</h3>
       </Sticky>
-      <Tweet />
+      <CreateTweet />
+      <DataStateView data={tweets} error={() => null} loading={() => null}>
+        {(tweets) => (
+          <>
+            {tweets.map((t) => (
+              <TweetView key={t.id} tweet={t} />
+            ))}
+          </>
+        )}
+      </DataStateView>
     </TimelineContainer>
-  );
-};
-
-// Tweet
-
-const TweetContainer = styled(Columns)`
-  padding: ${Pad.Medium};
-`;
-
-const TweetInput = styled.input.attrs(() => ({
-  type: 'text',
-}))`
-  font-size: 1.15em;
-  border: 0;
-  border-bottom: 1px solid ${Color.twitterBackground};
-  outline: none; /** Twitter does it! */
-  padding: ${Pad.Medium} ${Pad.Small};
-  height: fit-content;
-  width: 100%;
-`;
-
-const StyledAvatar = styled(Avatar).attrs(() => ({
-  src:
-    'https://lh3.googleusercontent.com/a-/AOh14GiL7j8zjljc1x01-ho0vMwqj_P_SqdmpQVOhqOl=s96-c',
-  alt: '',
-}))`
-  height: ${(props: { size?: number }) =>
-    props.size ? `${props.size}px` : '50px'};
-  width: ${(props: { size?: number }) =>
-    props.size ? `${props.size}px` : '50px'};
-  object-fit: contain;
-`;
-
-const TimelineTweetButton = styled(TweetButton)`
-  align-self: flex-end;
-  width: min-content;
-  padding: 0 ${Pad.Large};
-`;
-
-const Tweet: FC = () => {
-  return (
-    <TweetContainer as="form">
-      <Rows pad={Pad.Medium}>
-        <StyledAvatar />
-        <TweetInput placeholder="What's happening?" />
-      </Rows>
-      <TimelineTweetButton>Tweet</TimelineTweetButton>
-    </TweetContainer>
   );
 };

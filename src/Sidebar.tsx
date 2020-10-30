@@ -27,7 +27,9 @@ const TwitterBlue = styled(Twitter)`
 export const Sidebar: FC = () => {
   return (
     <SidebarContainer pad={Pad.XSmall}>
-      <SidebarOption Icon={TwitterBlue} />
+      <SidebarOptionContainer pad={Pad.Medium}>
+        <TwitterBlue />
+      </SidebarOptionContainer>
       <SidebarOption Icon={Home} label="Home" />
       <SidebarOption Icon={Search} label="Explore" />
       <SidebarOption Icon={NotificationsNone} label="Notifications" />
@@ -62,7 +64,7 @@ const SidebarOptionContainer = styled(Rows).attrs(() => ({
   }
 `;
 
-const SidebarOption: FC<{ Icon: SvgIconComponent; label?: string }> = ({
+const SidebarOption: FC<{ Icon: SvgIconComponent; label: string }> = ({
   Icon,
   label,
 }) => {
