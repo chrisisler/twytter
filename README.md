@@ -1,6 +1,6 @@
 ## Twytter
 
-- Not yet deployed.
+[See the application live.](https://twytter.vercel.app)
 
 #### development
 
