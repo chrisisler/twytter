@@ -28,6 +28,8 @@ const Sticky = styled.div`
   padding: ${Pad.Medium};
   width: 100%;
   position: sticky;
+  z-index: 100;
+  background-color: #fff;
   top: 0;
   border-bottom: 1px solid ${Color.twitterBackground};
 `;

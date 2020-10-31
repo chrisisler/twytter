@@ -1,8 +1,8 @@
+import { FC, useRef, useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { firestore } from 'firebase/app';
 import { IconButton, CircularProgress } from '@material-ui/core';
-import { FC, useRef, useState } from 'react';
-import { ImageSearch } from '@material-ui/icons';
+import { ImageSearch, CancelOutlined } from '@material-ui/icons';
 
 import { Columns, Pad, Color, TweetButton, Rows, UserAvatar } from './style';
 import { db, DbPath } from './firebase';
@@ -24,15 +24,30 @@ const TweetInput = styled.input.attrs(() => ({
   padding: ${Pad.Small} 0 ${Pad.Large} 0;
   height: fit-content;
   width: 100%;
-  border-bottom: 1px solid ${Color.twitterBackground};
 `;
 
 const TimelineTweetButton = styled(TweetButton)`
   width: min-content;
   padding: 0 ${Pad.Medium};
-  min-height: 40px;
+  min-height: 35px;
   font-size: 0.9em;
   margin: 0;
+`;
+
+const TweetDivider = styled.hr`
+  border: 0;
+  border-top: 1px solid ${Color.twitterBackground};
+  margin: 0;
+`;
+
+const ImagePreview = styled.div`
+  background-image: url(${(props: { src: string }) => props.src});
+  /** This is a cool property. */
+  background-size: cover;
+  border-radius: 20px;
+  width: 100%;
+  min-height: 120px;
+  height: 20vh;
 `;
 
 export const CreateTweet: FC = () => {
@@ -40,6 +55,40 @@ export const CreateTweet: FC = () => {
 
   const [tweet, setTweet] = useState('');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [imagePreviewSrc, setImagePreviewSrc] = useState('');
+
+  const postTweet = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // TODO
+    const entry: Omit<Tweet, 'id'> = {
+      username: 'chrisisler',
+      authorImage:
+        'https://lh3.googleusercontent.com/a-/AOh14GiL7j8zjljc1x01-ho0vMwqj_P_SqdmpQVOhqOl=s96-c',
+      authorName: 'Chris Isler',
+      mediaUrl: null,
+      text: tweet,
+      timestamp: firestore.FieldValue.serverTimestamp(),
+    };
+    db.collection(DbPath.Tweets)
+      .add(entry)
+      .catch((error) => {
+        if (error instanceof Error) alert(error.message);
+      });
+    setTweet('');
+  };
+
+  // If uploading an image, convert it to a string to show a preview
+  // TODO Loading UI
+  useEffect(() => {
+    let reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') return;
+      setImagePreviewSrc(reader.result);
+    };
+    if (!mediaFile) return;
+    reader.readAsDataURL(mediaFile);
+    return reader.abort;
+  }, [mediaFile]);
 
   return (
     <TweetContainer pad={Pad.Small}>
@@ -49,28 +98,8 @@ export const CreateTweet: FC = () => {
           src="https://lh3.googleusercontent.com/a-/AOh14GiL7j8zjljc1x01-ho0vMwqj_P_SqdmpQVOhqOl=s96-c"
           alt=""
         />
-        <Columns maxWidth pad={Pad.Medium}>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              // TODO
-              const entry: Omit<Tweet, 'id'> = {
-                username: 'chrisisler',
-                authorImage:
-                  'https://lh3.googleusercontent.com/a-/AOh14GiL7j8zjljc1x01-ho0vMwqj_P_SqdmpQVOhqOl=s96-c',
-                authorName: 'Chris Isler',
-                mediaUrl: null,
-                text: tweet,
-                timestamp: firestore.FieldValue.serverTimestamp(),
-              };
-              db.collection(DbPath.Tweets)
-                .add(entry)
-                .catch(() => {
-                  // TODO
-                });
-              setTweet('');
-            }}
-          >
+        <Columns maxWidth pad={Pad.Small}>
+          <form onSubmit={postTweet}>
             <TweetInput
               placeholder="What's happening?"
               maxLength={maxTweetLength}
@@ -79,15 +108,29 @@ export const CreateTweet: FC = () => {
               onChange={(event) => setTweet(event.target.value)}
             />
           </form>
+          {imagePreviewSrc && mediaFile && (
+            <Rows maxWidth>
+              <ImagePreview src={imagePreviewSrc}>
+                <IconButton
+                  aria-label="Remove photo"
+                  onClick={() => {
+                    setMediaFile(null);
+                    setImagePreviewSrc('');
+                  }}
+                >
+                  <CancelOutlined style={{ color: '#fff' }} />
+                </IconButton>
+              </ImagePreview>
+            </Rows>
+          )}
+          <TweetDivider />
           <Rows center between>
             <IconButton
               aria-label="Add photo"
               onClick={() => mediaInputRef.current?.click()}
             >
               <form>
-                <ImageSearch
-                  style={{ color: Color.twitterBlue, fontSize: '1em' }}
-                />
+                <ImageSearch style={{ color: Color.twitterBlue }} />
                 <input
                   ref={mediaInputRef}
                   style={{ width: '0', height: '0' }}
@@ -95,8 +138,9 @@ export const CreateTweet: FC = () => {
                   type="file"
                   accept="image/*"
                   onChange={(event) => {
-                    const fileList = event.target.files;
-                    if (fileList) setMediaFile(fileList[0]);
+                    const first = event.target.files?.[0];
+                    if (!first) return;
+                    setMediaFile(first);
                   }}
                 />
               </form>
@@ -107,7 +151,9 @@ export const CreateTweet: FC = () => {
                 variant="static"
                 value={Math.floor((tweet.length / maxTweetLength) * 100)}
               />
-              <TimelineTweetButton>Tweet</TimelineTweetButton>
+              <TimelineTweetButton disabled={tweet.length === 0}>
+                Tweet
+              </TimelineTweetButton>
             </Rows>
           </Rows>
         </Columns>

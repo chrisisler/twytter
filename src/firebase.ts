@@ -14,7 +14,11 @@ const firebaseConfig = {
   measurementId: 'G-S3JL9XL2Y1',
 };
 
-const app = firebase.initializeApp(firebaseConfig);
+// Avoids double-initializing error
+const app =
+  firebase.apps.length === 0
+    ? firebase.initializeApp(firebaseConfig)
+    : firebase.app();
 
 // Must be in this order
 const db = app.firestore();

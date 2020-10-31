@@ -25,6 +25,7 @@ interface Props {
 }
 
 export const UserAvatar = styled(Avatar)`
+  z-index: 1;
   height: ${(props: { size?: number }) =>
     props.size ? `${props.size}px` : '50px'} !important;
   width: ${(props: { size?: number }) =>
