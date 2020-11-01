@@ -5,7 +5,7 @@ import { IconButton, CircularProgress } from '@material-ui/core';
 import { ImageSearch, CancelOutlined } from '@material-ui/icons';
 
 import { Columns, Pad, Color, TweetButton, Rows, UserAvatar } from './style';
-import { db, DbPath } from './firebase';
+import { db, DbPath, storage } from './firebase';
 import { Tweet } from './interfaces';
 
 const maxTweetLength = 140;
@@ -57,15 +57,43 @@ export const CreateTweet: FC = () => {
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [imagePreviewSrc, setImagePreviewSrc] = useState('');
 
-  const postTweet = (event: React.FormEvent<HTMLFormElement>) => {
+  // TODO Loading UI
+  const storeFile = async (mediaFile: File) =>
+    new Promise<string | null>((resolve) => {
+      storage
+        .ref(`images/${mediaFile.name}`)
+        .put(mediaFile)
+        .on(
+          'state_changed',
+          () => {}, // Skip the progress callback
+          (error) => {
+            alert(error.message);
+            resolve(null);
+          },
+          () => {
+            storage
+              .ref('images')
+              .child(mediaFile.name)
+              .getDownloadURL()
+              .then((mediaUrl) => {
+                if (typeof mediaUrl !== 'string') {
+                  throw Error('Unreachable');
+                }
+                resolve(mediaUrl);
+              });
+          }
+        );
+    });
+
+  const postTweet = async <E extends React.SyntheticEvent>(event: E) => {
     event.preventDefault();
-    // TODO
+    const mediaUrl = mediaFile ? await storeFile(mediaFile) : null;
     const entry: Omit<Tweet, 'id'> = {
       username: 'chrisisler',
       authorImage:
         'https://lh3.googleusercontent.com/a-/AOh14GiL7j8zjljc1x01-ho0vMwqj_P_SqdmpQVOhqOl=s96-c',
       authorName: 'Chris Isler',
-      mediaUrl: null,
+      mediaUrl,
       text: tweet,
       timestamp: firestore.FieldValue.serverTimestamp(),
     };
@@ -151,7 +179,10 @@ export const CreateTweet: FC = () => {
                 variant="static"
                 value={Math.floor((tweet.length / maxTweetLength) * 100)}
               />
-              <TimelineTweetButton disabled={tweet.length === 0}>
+              <TimelineTweetButton
+                disabled={tweet.length === 0}
+                onClick={postTweet}
+              >
                 Tweet
               </TimelineTweetButton>
             </Rows>

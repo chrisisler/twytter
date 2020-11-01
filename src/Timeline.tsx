@@ -36,19 +36,23 @@ const Sticky = styled.div`
 
 export const Timeline: FC = () => {
   const [tweets, setTweets] = useState<DataState<Tweet[]>>(DataState.Loading);
+
   useEffect(() => {
-    db.collection(DbPath.Tweets).onSnapshot(
-      ({ docs }) =>
-        setTweets(
-          docs.map((doc) => {
-            const data = doc.data();
-            data.id = doc.id;
-            return data as Tweet;
-          })
-        ),
-      (error) => setTweets(DataState.error(error.message))
-    );
+    db.collection(DbPath.Tweets)
+      .orderBy('timestamp', 'desc')
+      .onSnapshot(
+        ({ docs }) =>
+          setTweets(
+            docs.map((doc) => {
+              const data = doc.data();
+              data.id = doc.id;
+              return data as Tweet;
+            })
+          ),
+        (error) => setTweets(DataState.error(error.message))
+      );
   }, []);
+
   return (
     <TimelineContainer>
       <Sticky>
